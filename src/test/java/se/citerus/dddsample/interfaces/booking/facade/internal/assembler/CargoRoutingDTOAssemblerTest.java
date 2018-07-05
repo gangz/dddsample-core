@@ -1,19 +1,30 @@
 package se.citerus.dddsample.interfaces.booking.facade.internal.assembler;
 
-import junit.framework.TestCase;
-import se.citerus.dddsample.domain.model.cargo.*;
-import se.citerus.dddsample.domain.model.location.Location;
-import static se.citerus.dddsample.domain.model.location.SampleLocations.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.MELBOURNE;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.ROTTERDAM;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.SHANGHAI;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.STOCKHOLM;
 import static se.citerus.dddsample.domain.model.voyage.SampleVoyages.CM001;
-import se.citerus.dddsample.interfaces.booking.facade.dto.CargoRoutingDTO;
-import se.citerus.dddsample.interfaces.booking.facade.dto.LegDTO;
 
 import java.util.Arrays;
 import java.util.Date;
 
-public class CargoRoutingDTOAssemblerTest extends TestCase {
+import org.junit.Test;
 
-  public void testToDTO() throws Exception {
+import se.citerus.dddsample.domain.model.cargo.Cargo;
+import se.citerus.dddsample.domain.model.cargo.Itinerary;
+import se.citerus.dddsample.domain.model.cargo.Leg;
+import se.citerus.dddsample.domain.model.cargo.RouteSpecification;
+import se.citerus.dddsample.domain.model.cargo.TrackingId;
+import se.citerus.dddsample.domain.model.location.Location;
+import se.citerus.dddsample.interfaces.booking.facade.dto.CargoRoutingDTO;
+import se.citerus.dddsample.interfaces.booking.facade.dto.LegDTO;
+
+public class CargoRoutingDTOAssemblerTest {
+
+  @Test
+  public void testToDTO() {
     final CargoRoutingDTOAssembler assembler = new CargoRoutingDTOAssembler();
 
     final Location origin = STOCKHOLM;
@@ -31,28 +42,29 @@ public class CargoRoutingDTOAssemblerTest extends TestCase {
 
     final CargoRoutingDTO dto = assembler.toDTO(cargo);
 
-    assertEquals(2, dto.getLegs().size());
+    assertThat(dto.getLegs()).hasSize(2);
 
     LegDTO legDTO = dto.getLegs().get(0);
-    assertEquals("CM001", legDTO.getVoyageNumber());
-    assertEquals("SESTO", legDTO.getFrom());
-    assertEquals("CNSHA", legDTO.getTo());
+    assertThat(legDTO.getVoyageNumber()).isEqualTo("CM001");
+    assertThat(legDTO.getFrom()).isEqualTo("SESTO");
+    assertThat(legDTO.getTo()).isEqualTo("CNSHA");
 
     legDTO = dto.getLegs().get(1);
-    assertEquals("CM001", legDTO.getVoyageNumber());
-    assertEquals("NLRTM", legDTO.getFrom());
-    assertEquals("AUMEL", legDTO.getTo());
+    assertThat(legDTO.getVoyageNumber()).isEqualTo("CM001");
+    assertThat(legDTO.getFrom()).isEqualTo("NLRTM");
+    assertThat(legDTO.getTo()).isEqualTo("AUMEL");
   }
 
-  public void testToDTO_NoItinerary() throws Exception {
+  @Test
+  public void testToDTO_NoItinerary() {
     final CargoRoutingDTOAssembler assembler = new CargoRoutingDTOAssembler();
 
     final Cargo cargo = new Cargo(new TrackingId("XYZ"), new RouteSpecification(STOCKHOLM, MELBOURNE, new Date()));
     final CargoRoutingDTO dto = assembler.toDTO(cargo);
 
-    assertEquals("XYZ", dto.getTrackingId());
-    assertEquals("SESTO", dto.getOrigin());
-    assertEquals("AUMEL", dto.getFinalDestination());
-    assertTrue(dto.getLegs().isEmpty());
+    assertThat(dto.getTrackingId()).isEqualTo("XYZ");
+    assertThat(dto.getOrigin()).isEqualTo("SESTO");
+    assertThat(dto.getFinalDestination()).isEqualTo("AUMEL");
+    assertThat(dto.getLegs().isEmpty()).isTrue();
   }
 }

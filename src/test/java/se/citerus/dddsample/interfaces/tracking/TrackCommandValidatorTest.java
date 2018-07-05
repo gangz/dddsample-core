@@ -1,37 +1,43 @@
 package se.citerus.dddsample.interfaces.tracking;
 
-import junit.framework.TestCase;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.Before;
+import org.junit.Test;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 
-public class TrackCommandValidatorTest extends TestCase {
+public class TrackCommandValidatorTest {
 
   TrackCommandValidator validator;
   TrackCommand command;
   BindingResult errors;
 
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() {
     validator = new TrackCommandValidator();
     command = new TrackCommand();
     errors = new BeanPropertyBindingResult(command, "command");
   }
 
-  public void testValidateIllegalId() throws Exception {
+  @Test
+  public void testValidateIllegalId() {
     validator.validate(command, errors);
 
-    assertEquals(1, errors.getErrorCount());
+    assertThat(errors.getErrorCount()).isEqualTo(1);
     FieldError error = errors.getFieldError("trackingId");
-    assertNotNull(error);
-    assertNull(error.getRejectedValue());
-    assertEquals("error.required", error.getCode());
+    assertThat(error).isNotNull();
+    assertThat(error.getRejectedValue()).isNull();
+    assertThat(error.getCode()).isEqualTo("error.required");
   }
-    
-  public void testValidateSuccess() throws Exception {
+
+  @Test
+  public void testValidateSuccess() {
     command.setTrackingId("non-empty");
     validator.validate(command, errors);
 
-    assertFalse(errors.hasErrors());
+    assertThat(errors.hasErrors()).isFalse();
   }
 
 }

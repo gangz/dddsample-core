@@ -1,27 +1,47 @@
 package se.citerus.dddsample.domain.model.cargo;
 
-import junit.framework.TestCase;
-import se.citerus.dddsample.application.util.DateTestUtil;
-import static se.citerus.dddsample.domain.model.cargo.RoutingStatus.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static se.citerus.dddsample.domain.model.cargo.RoutingStatus.MISROUTED;
+import static se.citerus.dddsample.domain.model.cargo.RoutingStatus.NOT_ROUTED;
+import static se.citerus.dddsample.domain.model.cargo.RoutingStatus.ROUTED;
 import static se.citerus.dddsample.domain.model.cargo.TransportStatus.NOT_RECEIVED;
-import se.citerus.dddsample.domain.model.handling.HandlingEvent;
-import se.citerus.dddsample.domain.model.handling.HandlingHistory;
-import se.citerus.dddsample.domain.model.location.Location;
-import static se.citerus.dddsample.domain.model.location.SampleLocations.*;
-import se.citerus.dddsample.domain.model.voyage.Voyage;
-import se.citerus.dddsample.domain.model.voyage.VoyageNumber;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.GOTHENBURG;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.HAMBURG;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.HANGZOU;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.HONGKONG;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.MELBOURNE;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.NEWYORK;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.ROTTERDAM;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.SHANGHAI;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.STOCKHOLM;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.TOKYO;
 
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
 
-public class CargoTest extends TestCase {
+import org.junit.Before;
+import org.junit.Test;
+
+import se.citerus.dddsample.application.util.DateTestUtil;
+import se.citerus.dddsample.domain.model.handling.HandlingEvent;
+import se.citerus.dddsample.domain.model.handling.HandlingHistory;
+import se.citerus.dddsample.domain.model.location.Location;
+import se.citerus.dddsample.domain.model.voyage.Voyage;
+import se.citerus.dddsample.domain.model.voyage.VoyageNumber;
+
+public class CargoTest {
 
   private List<HandlingEvent> events;
   private Voyage voyage;
 
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() {
     events = new ArrayList<HandlingEvent>();
 
     voyage = new Voyage.Builder(new VoyageNumber("0123"), STOCKHOLM).
@@ -31,7 +51,8 @@ public class CargoTest extends TestCase {
       build();
   }
 
-  public void testConstruction() throws Exception {
+  @Test
+  public void testConstruction() {
     final TrackingId trackingId = new TrackingId("XYZ");
     final Date arrivalDeadline = DateTestUtil.toDate("2009-03-13");
     final RouteSpecification routeSpecification = new RouteSpecification(
@@ -40,13 +61,14 @@ public class CargoTest extends TestCase {
 
     final Cargo cargo = new Cargo(trackingId, routeSpecification);
 
-    assertEquals(NOT_ROUTED, cargo.delivery().routingStatus());
-    assertEquals(NOT_RECEIVED, cargo.delivery().transportStatus());
-    assertEquals(Location.UNKNOWN, cargo.delivery().lastKnownLocation());
-    assertEquals(Voyage.NONE, cargo.delivery().currentVoyage());    
+    assertThat(cargo.delivery().routingStatus()).isEqualTo(NOT_ROUTED);
+    assertThat(cargo.delivery().transportStatus()).isEqualTo(NOT_RECEIVED);
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(Location.UNKNOWN);
+    assertThat(cargo.delivery().currentVoyage()).isEqualTo(Voyage.NONE);    
   }
 
-  public void testRoutingStatus() throws Exception {
+  @Test
+  public void testRoutingStatus() {
     final Cargo cargo = new Cargo(new TrackingId("XYZ"), new RouteSpecification(STOCKHOLM, MELBOURNE, new Date()));
     final Itinerary good = new Itinerary();
     final Itinerary bad = new Itinerary();
@@ -59,46 +81,52 @@ public class CargoTest extends TestCase {
 
     cargo.specifyNewRoute(acceptOnlyGood);
 
-    assertEquals(NOT_ROUTED, cargo.delivery().routingStatus());
+    assertThat(cargo.delivery().routingStatus()).isEqualTo(NOT_ROUTED);
     
     cargo.assignToRoute(bad);
-    assertEquals(MISROUTED, cargo.delivery().routingStatus());
+    assertThat(cargo.delivery().routingStatus()).isEqualTo(MISROUTED);
 
     cargo.assignToRoute(good);
-    assertEquals(ROUTED, cargo.delivery().routingStatus());
+    assertThat(cargo.delivery().routingStatus()).isEqualTo(ROUTED);
   }
 
-  public void testlastKnownLocationUnknownWhenNoEvents() throws Exception {
+  @Test
+  public void testlastKnownLocationUnknownWhenNoEvents() {
     Cargo cargo = new Cargo(new TrackingId("XYZ"), new RouteSpecification(STOCKHOLM, MELBOURNE, new Date()));
 
-    assertEquals(Location.UNKNOWN, cargo.delivery().lastKnownLocation());
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(Location.UNKNOWN);
   }
 
+  @Test
   public void testlastKnownLocationReceived() throws Exception {
     Cargo cargo = populateCargoReceivedStockholm();
 
-    assertEquals(STOCKHOLM, cargo.delivery().lastKnownLocation());
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(STOCKHOLM);
   }
 
+  @Test
   public void testlastKnownLocationClaimed() throws Exception {
     Cargo cargo = populateCargoClaimedMelbourne();
 
-    assertEquals(MELBOURNE, cargo.delivery().lastKnownLocation());
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(MELBOURNE);
   }
 
+  @Test
   public void testlastKnownLocationUnloaded() throws Exception {
     Cargo cargo = populateCargoOffHongKong();
 
-    assertEquals(HONGKONG, cargo.delivery().lastKnownLocation());
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(HONGKONG);
   }
 
+  @Test
   public void testlastKnownLocationloaded() throws Exception {
     Cargo cargo = populateCargoOnHamburg();
 
-    assertEquals(HAMBURG, cargo.delivery().lastKnownLocation());
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(HAMBURG);
   }
 
-  public void testEquality() throws Exception {
+  @Test
+  public void testEquality() {
     RouteSpecification spec1 = new RouteSpecification(STOCKHOLM, HONGKONG, new Date());
     RouteSpecification spec2 = new RouteSpecification(STOCKHOLM, MELBOURNE, new Date());
     Cargo c1 = new Cargo(new TrackingId("ABC"), spec1);
@@ -106,21 +134,22 @@ public class CargoTest extends TestCase {
     Cargo c3 = new Cargo(new TrackingId("ABC"), spec2);
     Cargo c4 = new Cargo(new TrackingId("ABC"), spec1);
 
-    assertTrue("Cargos should be equal when TrackingIDs are equal", c1.equals(c4));
-    assertTrue("Cargos should be equal when TrackingIDs are equal", c1.equals(c3));
-    assertTrue("Cargos should be equal when TrackingIDs are equal", c3.equals(c4));
-    assertFalse("Cargos are not equal when TrackingID differ", c1.equals(c2));
+    assertThat(c1.equals(c4)).as("Cargos should be equal when TrackingIDs are equal").isTrue();
+    assertThat(c1.equals(c3)).as("Cargos should be equal when TrackingIDs are equal").isTrue();
+    assertThat(c3.equals(c4)).as("Cargos should be equal when TrackingIDs are equal").isTrue();
+    assertThat(c1.equals(c2)).as("Cargos are not equal when TrackingID differ").isFalse();
   }
 
-  public void testIsUnloadedAtFinalDestination() throws Exception {
+  @Test
+  public void testIsUnloadedAtFinalDestination() {
     Cargo cargo = setUpCargoWithItinerary(HANGZOU, TOKYO, NEWYORK);
-    assertFalse(cargo.delivery().isUnloadedAtDestination());
+    assertThat(cargo.delivery().isUnloadedAtDestination()).isFalse();
 
     // Adding an event unrelated to unloading at final destination
     events.add(
       new HandlingEvent(cargo, new Date(10), new Date(), HandlingEvent.Type.RECEIVE, HANGZOU));
     cargo.deriveDeliveryProgress(new HandlingHistory(events));
-    assertFalse(cargo.delivery().isUnloadedAtDestination());
+    assertThat(cargo.delivery().isUnloadedAtDestination()).isFalse();
 
     Voyage voyage = new Voyage.Builder(new VoyageNumber("0123"), HANGZOU).
       addMovement(NEWYORK, new Date(), new Date()).
@@ -130,19 +159,19 @@ public class CargoTest extends TestCase {
     events.add(
       new HandlingEvent(cargo, new Date(20), new Date(), HandlingEvent.Type.UNLOAD, TOKYO, voyage));
     cargo.deriveDeliveryProgress(new HandlingHistory(events));
-    assertFalse(cargo.delivery().isUnloadedAtDestination());
+    assertThat(cargo.delivery().isUnloadedAtDestination()).isFalse();
 
     // Adding an event in the final destination, but not unload
     events.add(
       new HandlingEvent(cargo, new Date(30), new Date(), HandlingEvent.Type.CUSTOMS, NEWYORK));
     cargo.deriveDeliveryProgress(new HandlingHistory(events));
-    assertFalse(cargo.delivery().isUnloadedAtDestination());
+    assertThat(cargo.delivery().isUnloadedAtDestination()).isFalse();
 
     // Finally, cargo is unloaded at final destination
     events.add(
       new HandlingEvent(cargo, new Date(40), new Date(), HandlingEvent.Type.UNLOAD, NEWYORK, voyage));
     cargo.deriveDeliveryProgress(new HandlingHistory(events));
-    assertTrue(cargo.delivery().isUnloadedAtDestination());
+    assertThat(cargo.delivery().isUnloadedAtDestination()).isTrue();
   }
 
   // TODO: Generate test data some better way
@@ -221,15 +250,16 @@ public class CargoTest extends TestCase {
     return cargo;
   }
 
-  public void testIsMisdirected() throws Exception {
+  @Test
+  public void testIsMisdirected() {
     //A cargo with no itinerary is not misdirected
     Cargo cargo = new Cargo(new TrackingId("TRKID"), new RouteSpecification(SHANGHAI, GOTHENBURG, new Date()));
-    assertFalse(cargo.delivery().isMisdirected());
+    assertThat(cargo.delivery().isMisdirected()).isFalse();
 
     cargo = setUpCargoWithItinerary(SHANGHAI, ROTTERDAM, GOTHENBURG);
 
     //A cargo with no handling events is not misdirected
-    assertFalse(cargo.delivery().isMisdirected());
+    assertThat(cargo.delivery().isMisdirected()).isFalse();
 
     Collection<HandlingEvent> handlingEvents = new ArrayList<HandlingEvent>();
 
@@ -244,7 +274,7 @@ public class CargoTest extends TestCase {
 
     events.addAll(handlingEvents);
     cargo.deriveDeliveryProgress(new HandlingHistory(events));
-    assertFalse(cargo.delivery().isMisdirected());
+    assertThat(cargo.delivery().isMisdirected()).isFalse();
 
     //Try a couple of failing ones
 
@@ -255,7 +285,7 @@ public class CargoTest extends TestCase {
     events.addAll(handlingEvents);
     cargo.deriveDeliveryProgress(new HandlingHistory(events));
 
-    assertTrue(cargo.delivery().isMisdirected());
+    assertThat(cargo.delivery().isMisdirected()).isTrue();
 
 
     cargo = setUpCargoWithItinerary(SHANGHAI, ROTTERDAM, GOTHENBURG);
@@ -269,7 +299,7 @@ public class CargoTest extends TestCase {
     events.addAll(handlingEvents);
     cargo.deriveDeliveryProgress(new HandlingHistory(events));
 
-    assertTrue(cargo.delivery().isMisdirected());
+    assertThat(cargo.delivery().isMisdirected()).isTrue();
 
 
     cargo = setUpCargoWithItinerary(SHANGHAI, ROTTERDAM, GOTHENBURG);
@@ -283,7 +313,7 @@ public class CargoTest extends TestCase {
     events.addAll(handlingEvents);
     cargo.deriveDeliveryProgress(new HandlingHistory(events));
 
-    assertTrue(cargo.delivery().isMisdirected());
+    assertThat(cargo.delivery().isMisdirected()).isTrue();
   }
 
   private Cargo setUpCargoWithItinerary(Location origin, Location midpoint, Location destination) {

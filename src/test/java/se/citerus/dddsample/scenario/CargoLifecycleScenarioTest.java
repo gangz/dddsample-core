@@ -1,6 +1,38 @@
 package se.citerus.dddsample.scenario;
 
-import junit.framework.TestCase;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static se.citerus.dddsample.application.util.DateTestUtil.toDate;
+import static se.citerus.dddsample.domain.model.cargo.RoutingStatus.MISROUTED;
+import static se.citerus.dddsample.domain.model.cargo.RoutingStatus.NOT_ROUTED;
+import static se.citerus.dddsample.domain.model.cargo.RoutingStatus.ROUTED;
+import static se.citerus.dddsample.domain.model.cargo.TransportStatus.CLAIMED;
+import static se.citerus.dddsample.domain.model.cargo.TransportStatus.IN_PORT;
+import static se.citerus.dddsample.domain.model.cargo.TransportStatus.NOT_RECEIVED;
+import static se.citerus.dddsample.domain.model.cargo.TransportStatus.ONBOARD_CARRIER;
+import static se.citerus.dddsample.domain.model.handling.HandlingEvent.Type.CLAIM;
+import static se.citerus.dddsample.domain.model.handling.HandlingEvent.Type.LOAD;
+import static se.citerus.dddsample.domain.model.handling.HandlingEvent.Type.RECEIVE;
+import static se.citerus.dddsample.domain.model.handling.HandlingEvent.Type.UNLOAD;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.CHICAGO;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.HAMBURG;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.HONGKONG;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.NEWYORK;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.STOCKHOLM;
+import static se.citerus.dddsample.domain.model.location.SampleLocations.TOKYO;
+import static se.citerus.dddsample.domain.model.voyage.SampleVoyages.v100;
+import static se.citerus.dddsample.domain.model.voyage.SampleVoyages.v200;
+import static se.citerus.dddsample.domain.model.voyage.SampleVoyages.v300;
+import static se.citerus.dddsample.domain.model.voyage.SampleVoyages.v400;
+import static se.citerus.dddsample.domain.model.voyage.Voyage.NONE;
+
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+
+import org.junit.Before;
+import org.junit.Test;
+
 import se.citerus.dddsample.application.ApplicationEvents;
 import se.citerus.dddsample.application.BookingService;
 import se.citerus.dddsample.application.CargoInspectionService;
@@ -8,20 +40,19 @@ import se.citerus.dddsample.application.HandlingEventService;
 import se.citerus.dddsample.application.impl.BookingServiceImpl;
 import se.citerus.dddsample.application.impl.CargoInspectionServiceImpl;
 import se.citerus.dddsample.application.impl.HandlingEventServiceImpl;
-import static se.citerus.dddsample.application.util.DateTestUtil.toDate;
-import se.citerus.dddsample.domain.model.cargo.*;
-import static se.citerus.dddsample.domain.model.cargo.RoutingStatus.*;
-import static se.citerus.dddsample.domain.model.cargo.TransportStatus.*;
+import se.citerus.dddsample.domain.model.cargo.Cargo;
+import se.citerus.dddsample.domain.model.cargo.CargoRepository;
+import se.citerus.dddsample.domain.model.cargo.HandlingActivity;
+import se.citerus.dddsample.domain.model.cargo.Itinerary;
+import se.citerus.dddsample.domain.model.cargo.Leg;
+import se.citerus.dddsample.domain.model.cargo.RouteSpecification;
+import se.citerus.dddsample.domain.model.cargo.TrackingId;
 import se.citerus.dddsample.domain.model.handling.CannotCreateHandlingEventException;
-import static se.citerus.dddsample.domain.model.handling.HandlingEvent.Type.*;
 import se.citerus.dddsample.domain.model.handling.HandlingEventFactory;
 import se.citerus.dddsample.domain.model.handling.HandlingEventRepository;
 import se.citerus.dddsample.domain.model.location.Location;
 import se.citerus.dddsample.domain.model.location.LocationRepository;
-import static se.citerus.dddsample.domain.model.location.SampleLocations.*;
 import se.citerus.dddsample.domain.model.location.UnLocode;
-import static se.citerus.dddsample.domain.model.voyage.SampleVoyages.*;
-import static se.citerus.dddsample.domain.model.voyage.Voyage.NONE;
 import se.citerus.dddsample.domain.model.voyage.VoyageNumber;
 import se.citerus.dddsample.domain.model.voyage.VoyageRepository;
 import se.citerus.dddsample.domain.service.RoutingService;
@@ -31,11 +62,7 @@ import se.citerus.dddsample.infrastructure.persistence.inmemory.HandlingEventRep
 import se.citerus.dddsample.infrastructure.persistence.inmemory.LocationRepositoryInMem;
 import se.citerus.dddsample.infrastructure.persistence.inmemory.VoyageRepositoryInMem;
 
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-
-public class CargoLifecycleScenarioTest extends TestCase {
+public class CargoLifecycleScenarioTest {
 
   /**
    * Repository implementations are part of the infrastructure layer,
@@ -82,6 +109,7 @@ public class CargoLifecycleScenarioTest extends TestCase {
    */
   RoutingService routingService;
 
+  @Test
   public void testCargoFromHongkongToStockholm() throws Exception {
     /* Test setup: A cargo should be shipped from Hongkong to Stockholm,
        and it should arrive in no more than two weeks. */
@@ -105,12 +133,12 @@ public class CargoLifecycleScenarioTest extends TestCase {
        Tracking the cargo basically amounts to presenting information extracted from
        the cargo aggregate in a suitable way. */
     Cargo cargo = cargoRepository.find(trackingId);
-    assertNotNull(cargo);
-    assertEquals(NOT_RECEIVED, cargo.delivery().transportStatus());
-    assertEquals(NOT_ROUTED, cargo.delivery().routingStatus());
-    assertFalse(cargo.delivery().isMisdirected());
-    assertNull(cargo.delivery().estimatedTimeOfArrival());
-    assertNull(cargo.delivery().nextExpectedActivity());
+    assertThat(cargo).isNotNull();
+    assertThat(cargo.delivery().transportStatus()).isEqualTo(NOT_RECEIVED);
+    assertThat(cargo.delivery().routingStatus()).isEqualTo(NOT_ROUTED);
+    assertThat(cargo.delivery().isMisdirected()).isFalse();
+    assertThat(cargo.delivery().estimatedTimeOfArrival()).isNull();
+    assertThat(cargo.delivery().nextExpectedActivity()).isNull();
 
     /* Use case 2: routing
 
@@ -124,10 +152,10 @@ public class CargoLifecycleScenarioTest extends TestCase {
     Itinerary itinerary = selectPreferedItinerary(itineraries);
     cargo.assignToRoute(itinerary);
 
-    assertEquals(NOT_RECEIVED, cargo.delivery().transportStatus());
-    assertEquals(ROUTED, cargo.delivery().routingStatus());
-    assertNotNull(cargo.delivery().estimatedTimeOfArrival());
-    assertEquals(new HandlingActivity(RECEIVE, HONGKONG), cargo.delivery().nextExpectedActivity());
+    assertThat(cargo.delivery().transportStatus()).isEqualTo(NOT_RECEIVED);
+    assertThat(cargo.delivery().routingStatus()).isEqualTo(ROUTED);
+    assertThat(cargo.delivery().estimatedTimeOfArrival()).isNotNull();
+    assertThat(cargo.delivery().nextExpectedActivity()).isEqualTo(new HandlingActivity(RECEIVE, HONGKONG));
 
     /*
       Use case 3: handling
@@ -147,8 +175,8 @@ public class CargoLifecycleScenarioTest extends TestCase {
       toDate("2009-03-01"), trackingId, null, HONGKONG.unLocode(), RECEIVE
     );
 
-    assertEquals(IN_PORT, cargo.delivery().transportStatus());
-    assertEquals(HONGKONG, cargo.delivery().lastKnownLocation());
+    assertThat(cargo.delivery().transportStatus()).isEqualTo(IN_PORT);
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(HONGKONG);
     
     // Next event: Load onto voyage CM003 in Hongkong
     handlingEventService.registerHandlingEvent(
@@ -156,11 +184,11 @@ public class CargoLifecycleScenarioTest extends TestCase {
     );
 
     // Check current state - should be ok
-    assertEquals(v100, cargo.delivery().currentVoyage());
-    assertEquals(HONGKONG, cargo.delivery().lastKnownLocation());
-    assertEquals(ONBOARD_CARRIER, cargo.delivery().transportStatus());
-    assertFalse(cargo.delivery().isMisdirected());
-    assertEquals(new HandlingActivity(UNLOAD, NEWYORK, v100), cargo.delivery().nextExpectedActivity());
+    assertThat(cargo.delivery().currentVoyage()).isEqualTo(v100);
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(HONGKONG);
+    assertThat(cargo.delivery().transportStatus()).isEqualTo(ONBOARD_CARRIER);
+    assertThat(cargo.delivery().isMisdirected()).isFalse();
+    assertThat(cargo.delivery().nextExpectedActivity()).isEqualTo(new HandlingActivity(UNLOAD, NEWYORK, v100));
 
 
     /*
@@ -187,11 +215,11 @@ public class CargoLifecycleScenarioTest extends TestCase {
     );
 
     // Check current state - cargo is misdirected!
-    assertEquals(NONE, cargo.delivery().currentVoyage());
-    assertEquals(TOKYO, cargo.delivery().lastKnownLocation());
-    assertEquals(IN_PORT, cargo.delivery().transportStatus());
-    assertTrue(cargo.delivery().isMisdirected());
-    assertNull(cargo.delivery().nextExpectedActivity());
+    assertThat(cargo.delivery().currentVoyage()).isEqualTo(NONE);
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(TOKYO);
+    assertThat(cargo.delivery().transportStatus()).isEqualTo(IN_PORT);
+    assertThat(cargo.delivery().isMisdirected()).isTrue();
+    assertThat(cargo.delivery().nextExpectedActivity()).isNull();
 
 
     // -- Cargo needs to be rerouted --
@@ -203,8 +231,8 @@ public class CargoLifecycleScenarioTest extends TestCase {
     cargo.specifyNewRoute(fromTokyo);
 
     // The old itinerary does not satisfy the new specification
-    assertEquals(MISROUTED, cargo.delivery().routingStatus());
-    assertNull(cargo.delivery().nextExpectedActivity());
+    assertThat(cargo.delivery().routingStatus()).isEqualTo(MISROUTED);
+    assertThat(cargo.delivery().nextExpectedActivity()).isNull();
 
     // Repeat procedure of selecting one out of a number of possible routes satisfying the route spec
     List<Itinerary> newItineraries = bookingService.requestPossibleRoutesForCargo(cargo.trackingId());
@@ -212,11 +240,11 @@ public class CargoLifecycleScenarioTest extends TestCase {
     cargo.assignToRoute(newItinerary);
 
     // New itinerary should satisfy new route
-    assertEquals(ROUTED, cargo.delivery().routingStatus());
+    assertThat(cargo.delivery().routingStatus()).isEqualTo(ROUTED);
 
     // TODO we can't handle the face that after a reroute, the cargo isn't misdirected anymore
-    //assertFalse(cargo.isMisdirected());
-    //assertEquals(new HandlingActivity(LOAD, TOKYO), cargo.nextExpectedActivity());
+    //assertThat(cargo.isMisdirected()).isFalse();
+    //assertThat(, cargo.nextExpectedActivity()).isEqualTo(new HandlingActivity(LOAD, TOKYO));
 
 
     // -- Cargo has been rerouted, shipping continues --
@@ -228,11 +256,11 @@ public class CargoLifecycleScenarioTest extends TestCase {
     );
 
     // Check current state - should be ok
-    assertEquals(v300, cargo.delivery().currentVoyage());
-    assertEquals(TOKYO, cargo.delivery().lastKnownLocation());
-    assertEquals(ONBOARD_CARRIER, cargo.delivery().transportStatus());
-    assertFalse(cargo.delivery().isMisdirected());
-    assertEquals(new HandlingActivity(UNLOAD, HAMBURG, v300), cargo.delivery().nextExpectedActivity());
+    assertThat(cargo.delivery().currentVoyage()).isEqualTo(v300);
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(TOKYO);
+    assertThat(cargo.delivery().transportStatus()).isEqualTo(ONBOARD_CARRIER);
+    assertThat(cargo.delivery().isMisdirected()).isFalse();
+    assertThat(cargo.delivery().nextExpectedActivity()).isEqualTo(new HandlingActivity(UNLOAD, HAMBURG, v300));
 
     // Unload in Hamburg
     handlingEventService.registerHandlingEvent(
@@ -240,11 +268,11 @@ public class CargoLifecycleScenarioTest extends TestCase {
     );
 
     // Check current state - should be ok
-    assertEquals(NONE, cargo.delivery().currentVoyage());
-    assertEquals(HAMBURG, cargo.delivery().lastKnownLocation());
-    assertEquals(IN_PORT, cargo.delivery().transportStatus());
-    assertFalse(cargo.delivery().isMisdirected());
-    assertEquals(new HandlingActivity(LOAD, HAMBURG, v400), cargo.delivery().nextExpectedActivity());
+    assertThat(cargo.delivery().currentVoyage()).isEqualTo(NONE);
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(HAMBURG);
+    assertThat(cargo.delivery().transportStatus()).isEqualTo(IN_PORT);
+    assertThat(cargo.delivery().isMisdirected()).isFalse();
+    assertThat(cargo.delivery().nextExpectedActivity()).isEqualTo(new HandlingActivity(LOAD, HAMBURG, v400));
 
 
     // Load in Hamburg
@@ -253,11 +281,11 @@ public class CargoLifecycleScenarioTest extends TestCase {
     );
 
     // Check current state - should be ok
-    assertEquals(v400, cargo.delivery().currentVoyage());
-    assertEquals(HAMBURG, cargo.delivery().lastKnownLocation());
-    assertEquals(ONBOARD_CARRIER, cargo.delivery().transportStatus());
-    assertFalse(cargo.delivery().isMisdirected());
-    assertEquals(new HandlingActivity(UNLOAD, STOCKHOLM, v400), cargo.delivery().nextExpectedActivity());
+    assertThat(cargo.delivery().currentVoyage()).isEqualTo(v400);
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(HAMBURG);
+    assertThat(cargo.delivery().transportStatus()).isEqualTo(ONBOARD_CARRIER);
+    assertThat(cargo.delivery().isMisdirected()).isFalse();
+    assertThat(cargo.delivery().nextExpectedActivity()).isEqualTo(new HandlingActivity(UNLOAD, STOCKHOLM, v400));
 
 
     // Unload in Stockholm
@@ -266,11 +294,11 @@ public class CargoLifecycleScenarioTest extends TestCase {
     );
 
     // Check current state - should be ok
-    assertEquals(NONE, cargo.delivery().currentVoyage());
-    assertEquals(STOCKHOLM, cargo.delivery().lastKnownLocation());
-    assertEquals(IN_PORT, cargo.delivery().transportStatus());
-    assertFalse(cargo.delivery().isMisdirected());
-    assertEquals(new HandlingActivity(CLAIM, STOCKHOLM), cargo.delivery().nextExpectedActivity());
+    assertThat(cargo.delivery().currentVoyage()).isEqualTo(NONE);
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(STOCKHOLM);
+    assertThat(cargo.delivery().transportStatus()).isEqualTo(IN_PORT);
+    assertThat(cargo.delivery().isMisdirected()).isFalse();
+    assertThat(cargo.delivery().nextExpectedActivity()).isEqualTo(new HandlingActivity(CLAIM, STOCKHOLM));
 
     // Finally, cargo is claimed in Stockholm. This ends the cargo lifecycle from our perspective.
     handlingEventService.registerHandlingEvent(
@@ -278,11 +306,11 @@ public class CargoLifecycleScenarioTest extends TestCase {
     );
 
     // Check current state - should be ok
-    assertEquals(NONE, cargo.delivery().currentVoyage());
-    assertEquals(STOCKHOLM, cargo.delivery().lastKnownLocation());
-    assertEquals(CLAIMED, cargo.delivery().transportStatus());
-    assertFalse(cargo.delivery().isMisdirected());
-    assertNull(cargo.delivery().nextExpectedActivity());
+    assertThat(cargo.delivery().currentVoyage()).isEqualTo(NONE);
+    assertThat(cargo.delivery().lastKnownLocation()).isEqualTo(STOCKHOLM);
+    assertThat(cargo.delivery().transportStatus()).isEqualTo(CLAIMED);
+    assertThat(cargo.delivery().isMisdirected()).isFalse();
+    assertThat(cargo.delivery().nextExpectedActivity()).isNull();
   }
 
 
@@ -294,7 +322,8 @@ public class CargoLifecycleScenarioTest extends TestCase {
     return itineraries.get(0);
   }
 
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() {
     routingService = new RoutingService() {
       public List<Itinerary> fetchRoutesForSpecification(RouteSpecification routeSpecification) {
         if (routeSpecification.origin().equals(HONGKONG)) {

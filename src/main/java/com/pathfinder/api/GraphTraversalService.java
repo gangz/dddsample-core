@@ -22,5 +22,4 @@ public interface GraphTraversalService extends Remote {
   List<TransitPath> findShortestPath(String origin,
                                      String destination,
                                      Properties limitations) throws RemoteException;
-
 }

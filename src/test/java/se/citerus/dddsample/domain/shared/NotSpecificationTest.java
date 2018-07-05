@@ -1,18 +1,21 @@
 package se.citerus.dddsample.domain.shared;
 
-import junit.framework.TestCase;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public class NotSpecificationTest extends TestCase {
+import org.junit.Test;
 
-  public void testAndIsSatisifedBy() throws Exception {
+public class NotSpecificationTest {
+
+  @Test
+  public void testAndIsSatisifedBy() {
     AlwaysTrueSpec trueSpec = new AlwaysTrueSpec();
     AlwaysFalseSpec falseSpec = new AlwaysFalseSpec();
 
     NotSpecification<Object> notSpecification = new NotSpecification<Object>(trueSpec);
-    assertFalse(notSpecification.isSatisfiedBy(new Object()));
+    assertThat(notSpecification.isSatisfiedBy(new Object())).isFalse();
 
     notSpecification = new NotSpecification<Object>(falseSpec);
-    assertTrue(notSpecification.isSatisfiedBy(new Object()));
+    assertThat(notSpecification.isSatisfiedBy(new Object())).isTrue();
 
   }
 }

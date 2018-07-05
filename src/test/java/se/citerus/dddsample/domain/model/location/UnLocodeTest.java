@@ -1,10 +1,15 @@
 package se.citerus.dddsample.domain.model.location;
 
-import junit.framework.TestCase;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
-public class UnLocodeTest extends TestCase {
+import org.junit.Test;
 
-  public void testNew() throws Exception {
+public class UnLocodeTest {
+
+
+  @Test
+  public void testNew() {
     assertValid("AA234");
     assertValid("AAA9B");
     assertValid("AAAAA");
@@ -18,27 +23,30 @@ public class UnLocodeTest extends TestCase {
     assertInvalid(null);
   }
 
-  public void testIdString() throws Exception {
-    assertEquals("ABCDE", new UnLocode("AbcDe").idString());
+  @Test
+  public void testIdString() {
+    assertThat(new UnLocode("AbcDe").idString()).isEqualTo("ABCDE");
   }
 
-  public void testEquals() throws Exception {
+  @Test
+  public void testEquals() {
     UnLocode allCaps = new UnLocode("ABCDE");
     UnLocode mixedCase = new UnLocode("aBcDe");
 
-    assertTrue(allCaps.equals(mixedCase));
-    assertTrue(mixedCase.equals(allCaps));
-    assertTrue(allCaps.equals(allCaps));
+    assertThat(allCaps.equals(mixedCase)).isTrue();
+    assertThat(mixedCase.equals(allCaps)).isTrue();
+    assertThat(allCaps.equals(allCaps)).isTrue();
 
-    assertFalse(allCaps.equals(null));
-    assertFalse(allCaps.equals(new UnLocode("FGHIJ")));
+    assertThat(allCaps.equals(null)).isFalse();
+    assertThat(allCaps.equals(new UnLocode("FGHIJ"))).isFalse();
   }
 
-  public void testHashCode() throws Exception {
+  @Test
+  public void testHashCode() {
     UnLocode allCaps = new UnLocode("ABCDE");
     UnLocode mixedCase = new UnLocode("aBcDe");
 
-    assertEquals(allCaps.hashCode(), mixedCase.hashCode());  
+    assertThat(mixedCase.hashCode()).isEqualTo(allCaps.hashCode());  
   }
   
   private void assertValid(String unlocode) {

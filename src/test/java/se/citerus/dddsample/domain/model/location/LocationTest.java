@@ -1,27 +1,31 @@
 package se.citerus.dddsample.domain.model.location;
 
-import junit.framework.TestCase;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
-public class LocationTest extends TestCase {
+import org.junit.Test;
 
+public class LocationTest {
+
+  @Test
   public void testEquals() {
     // Same UN locode - equal
-    assertTrue(new Location(new UnLocode("ATEST"),"test-name").
-        equals(new Location(new UnLocode("ATEST"),"test-name")));
+    assertThat(new Location(new UnLocode("ATEST"),"test-name").
+        equals(new Location(new UnLocode("ATEST"),"test-name"))).isTrue();
 
     // Different UN locodes - not equal
-    assertFalse(new Location(new UnLocode("ATEST"),"test-name").
-         equals(new Location(new UnLocode("TESTB"), "test-name")));
+    assertThat(new Location(new UnLocode("ATEST"),"test-name").
+         equals(new Location(new UnLocode("TESTB"), "test-name"))).isFalse();
 
     // Always equal to itself
     Location location = new Location(new UnLocode("ATEST"),"test-name");
-    assertTrue(location.equals(location));
+    assertThat(location.equals(location)).isTrue();
 
     // Never equal to null
-    assertFalse(location.equals(null));
+    assertThat(location.equals(null)).isFalse();
 
     // Special UNKNOWN location is equal to itself
-    assertTrue(Location.UNKNOWN.equals(Location.UNKNOWN));
+    assertThat(Location.UNKNOWN.equals(Location.UNKNOWN)).isTrue();
 
     try {
       new Location(null, null);
